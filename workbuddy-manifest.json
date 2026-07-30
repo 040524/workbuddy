@@ -2,11 +2,12 @@
   "name": "WorkBuddy",
   "short_name": "WorkBuddy",
   "description": "记账 & 韩语学习",
-  "start_url": "./workbuddy-dashboard.html",
+  "start_url": "./",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#d6e8f7",
   "theme_color": "#ff8fa3",
+  "scope": "./",
   "icons": [
     {
       "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%23ff8fa3'/%3E%3Ctext x='256' y='328' text-anchor='middle' font-size='256'%3E🧩%3C/text%3E%3C/svg%3E",
