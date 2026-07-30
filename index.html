@@ -1,0 +1,2159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>WorkBuddy</title>
+
+<!-- PWA Meta -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="WorkBuddy">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#d6e8f7">
+<meta name="description" content="WorkBuddy · 记账 & 韩语学习">
+
+<!-- PWA Manifest -->
+<link rel="manifest" href="./workbuddy-manifest.json">
+
+<!-- Apple Touch Icon (inline SVG) -->
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%23ff8fa3'/%3E%3Ctext x='256' y='328' text-anchor='middle' font-size='256'%3E🧩%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #d6e8f7;
+    --card: #ffffff;
+    --text: #3a4a5c;
+    --text-secondary: #7a8fa6;
+    --text-light: #a8bcd4;
+    --primary: #ff8fa3;
+    --primary-light: #ffe4ea;
+    --success: #7dd3a8;
+    --success-light: #e8f8ef;
+    --warning: #f5c06e;
+    --warning-light: #fdf5e6;
+    --danger: #ff8fa3;
+    --danger-light: #ffe4ea;
+    --border: #e8f0f8;
+    --shadow: 0 4px 16px rgba(138,168,200,0.15);
+    --radius: 18px;
+    --radius-sm: 14px;
+    --sidebar-w: 78px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  /* 小樱桃背景图案 */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Ctext x='10' y='20' font-size='14' opacity='0.12'%3E🍒%3C/text%3E%3Ctext x='40' y='50' font-size='12' opacity='0.08'%3E🍒%3C/text%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ===== 整体布局 ===== */
+  .app-shell {
+    display: flex;
+    height: 100dvh;
+    max-width: 480px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ===== 左侧导航栏 ===== */
+  .sidebar {
+    width: var(--sidebar-w);
+    background: rgba(255,255,255,0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px 0 14px;
+    border-right: 1px solid rgba(255,255,255,0.5);
+    flex-shrink: 0;
+    z-index: 2;
+    border-radius: 0 20px 20px 0;
+    margin: 8px 0 8px 8px;
+    box-shadow: var(--shadow);
+  }
+
+  .sidebar-logo {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #ff8fa3, #ffb3c1);
+    box-shadow: 0 3px 12px rgba(255,143,163,0.35);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    font-size: 26px;
+    line-height: 1;
+    transition: transform 0.2s;
+    margin-bottom: 18px;
+    flex-shrink: 0;
+  }
+  .sidebar-logo:active { transform: scale(0.93); }
+  .sidebar-logo img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+  }
+  .sidebar-logo .avatar-emoji {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%; height: 100%;
+  }
+  .sidebar-logo .avatar-edit-hint {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: rgba(0,0,0,0.35);
+    color: #fff;
+    font-size: 8px;
+    text-align: center;
+    padding: 2px 0;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .sidebar-logo:active .avatar-edit-hint,
+  .sidebar-logo:hover .avatar-edit-hint { opacity: 1; }
+
+  .sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+    width: 100%;
+    align-items: center;
+  }
+
+  .nav-tab {
+    width: 58px;
+    min-height: 58px;
+    border: none;
+    background: rgba(255,255,255,0.6);
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    cursor: pointer;
+    transition: all 0.25s;
+    color: var(--text-light);
+    font-size: 10px;
+    font-weight: 500;
+    -webkit-tap-highlight-color: transparent;
+    padding: 6px 2px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  }
+  .nav-tab .nav-icon { font-size: 22px; line-height: 1; }
+  .nav-tab:active { transform: scale(0.94); }
+  .nav-tab.active {
+    background: linear-gradient(135deg, #ff8fa3, #ffb3c1);
+    color: #fff;
+    font-weight: 700;
+    box-shadow: 0 3px 12px rgba(255,143,163,0.35);
+  }
+
+  .sidebar-footer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    font-size: 9px;
+    color: var(--text-light);
+    text-align: center;
+    line-height: 1.4;
+    opacity: 0.7;
+  }
+  .settings-btn {
+    width: 34px; height: 34px;
+    border: none;
+    background: rgba(255,255,255,0.6);
+    border-radius: 50%;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  }
+  .settings-btn:active {
+    background: linear-gradient(135deg, #ff8fa3, #ffb3c1);
+    color: #fff;
+    transform: scale(0.93);
+  }
+
+  /* ===== 右侧内容区 ===== */
+  .main-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    padding: 14px 10px 14px 12px;
+    min-width: 0;
+  }
+
+  /* Header */
+  .content-header {
+    margin-bottom: 12px;
+  }
+  .content-header .page-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--primary);
+    letter-spacing: -0.3px;
+  }
+  .content-header .date-label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+  }
+
+  /* Panel */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* Card */
+  .card {
+    background: rgba(255,255,255,0.92);
+    border-radius: var(--radius);
+    padding: 14px 14px;
+    box-shadow: var(--shadow);
+    border: 1px solid rgba(255,255,255,0.8);
+    margin-bottom: 10px;
+    backdrop-filter: blur(4px);
+  }
+  .card:last-child { margin-bottom: 0; }
+
+  /* Stats Row */
+  .stats-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .stat-item {
+    flex: 1;
+    background: var(--card);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    text-align: center;
+  }
+  .stat-label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-bottom: 2px;
+  }
+  .stat-value {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+  .stat-value.expense { color: var(--danger); }
+  .stat-value.saving { color: var(--success); }
+
+  /* Form */
+  .form-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .form-row:last-child { margin-bottom: 0; }
+  .input-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .input-group label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+  .input-group input,
+  .input-group select {
+    width: 100%;
+    height: 38px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0 10px;
+    font-size: 14px;
+    color: var(--text);
+    background: #fafbfc;
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+  .input-group input:focus,
+  .input-group select:focus {
+    border-color: var(--primary);
+    background: #fff;
+  }
+  .input-group input::placeholder { color: var(--text-light); }
+
+  .btn {
+    height: 40px;
+    border: none;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 0 18px;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    justify-content: center;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary {
+    background: linear-gradient(135deg, #ff8fa3, #ffb3c1);
+    color: #fff;
+    box-shadow: 0 3px 12px rgba(255,143,163,0.3);
+  }
+  .btn-primary:active {
+    background: linear-gradient(135deg, #ff7a91, #ff9eb0);
+    box-shadow: 0 2px 8px rgba(255,143,163,0.25);
+  }
+
+  /* Expense List */
+  .expense-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+  .expense-list-title {
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .expense-list-count {
+    font-size: 11px;
+    color: var(--text-light);
+  }
+  .expense-list-scroll {
+    max-height: 280px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .expense-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .expense-item:last-child { border-bottom: none; }
+  .expense-info { flex: 1; min-width: 0; }
+  .expense-note {
+    font-size: 13px;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .expense-meta {
+    font-size: 10px;
+    color: var(--text-light);
+    margin-top: 1px;
+  }
+  .expense-amount {
+    font-weight: 700;
+    font-size: 14px;
+    margin-right: 6px;
+    white-space: nowrap;
+  }
+  .expense-amount.out { color: var(--danger); }
+  .expense-amount.in { color: var(--success); }
+  .expense-type-tag {
+    font-size: 9px;
+    padding: 1px 7px;
+    border-radius: 20px;
+    font-weight: 600;
+    margin-right: 3px;
+  }
+  .expense-type-tag.out {
+    background: var(--danger-light);
+    color: var(--danger);
+  }
+  .expense-type-tag.in {
+    background: var(--success-light);
+    color: var(--success);
+  }
+  .delete-btn {
+    width: 26px; height: 26px;
+    border: none; background: none;
+    color: var(--text-light);
+    font-size: 15px;
+    cursor: pointer;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .delete-btn:active { background: #f0f0f0; color: var(--danger); }
+
+  .empty-state {
+    text-align: center;
+    padding: 20px 0;
+    color: var(--text-light);
+    font-size: 12px;
+  }
+
+  /* Korean */
+  .korean-block { margin-bottom: 10px; }
+  .korean-block:last-child { margin-bottom: 0; }
+  .korean-block-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .syllable-grid {
+    display: flex;
+    gap: 8px;
+  }
+  .syllable-card {
+    flex: 1;
+    background: #f9fafc;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 6px 8px;
+    text-align: center;
+    transition: all 0.2s;
+    cursor: pointer;
+    position: relative;
+  }
+  .syllable-card:active { background: var(--primary-light); border-color: var(--primary); }
+  .syllable-card.speaking {
+    background: #e3f0fd;
+    border-color: var(--primary);
+    animation: pulse-border 0.6s ease-in-out infinite;
+  }
+  @keyframes pulse-border {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(74,144,217,0.3); }
+    50% { box-shadow: 0 0 0 6px rgba(74,144,217,0); }
+  }
+  .syllable-speaker {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px; height: 20px;
+    font-size: 11px;
+    background: var(--primary-light);
+    color: var(--primary);
+    border-radius: 50%;
+    margin-top: 4px;
+    transition: all 0.2s;
+  }
+  .syllable-card.speaking .syllable-speaker {
+    background: var(--primary);
+    color: #fff;
+  }
+  .syllable-char {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.2;
+  }
+  .syllable-roman {
+    font-size: 11px;
+    color: var(--primary);
+    font-weight: 500;
+    margin-top: 2px;
+  }
+  .syllable-hint {
+    font-size: 9px;
+    color: var(--text-light);
+    margin-top: 1px;
+  }
+
+  .word-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .word-item {
+    background: #f9fafc;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 9px 10px 7px;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  .word-item:active { background: var(--primary-light); }
+  .word-item.speaking {
+    background: #e3f0fd;
+    border-color: var(--primary);
+    animation: pulse-border 0.6s ease-in-out infinite;
+  }
+  .word-korean {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .word-speaker {
+    font-size: 12px;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+  }
+  .word-item:active .word-speaker,
+  .word-item.speaking .word-speaker { opacity: 1; }
+  .word-meaning {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 1px;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--text);
+    color: #fff;
+    padding: 9px 18px;
+    border-radius: 18px;
+    font-size: 12px;
+    font-weight: 500;
+    z-index: 1000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .toast.show { opacity: 1; }
+
+  /* ===== 经期记录 ===== */
+  .period-status-card {
+    text-align: center;
+    padding: 16px 0 6px;
+  }
+  .period-phase {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 6px 16px;
+    border-radius: 20px;
+    margin-bottom: 8px;
+  }
+  .period-phase.active {
+    background: var(--danger-light);
+    color: var(--danger);
+  }
+  .period-phase.safe {
+    background: var(--success-light);
+    color: var(--success);
+  }
+  .period-phase.soon {
+    background: var(--warning-light);
+    color: var(--warning);
+  }
+  .period-countdown {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+  }
+  .period-dates {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .period-date-btn {
+    padding: 8px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    background: #fff;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .period-date-btn:active { transform: scale(0.96); }
+  .period-date-btn.flow-light {
+    background: #fff5f5;
+    border-color: #ffcccc;
+    color: var(--danger);
+  }
+  .period-date-btn.flow-medium {
+    background: #ffe8e8;
+    border-color: #ffaaaa;
+    color: var(--danger);
+  }
+  .period-date-btn.flow-heavy {
+    background: #ffd4d4;
+    border-color: #ff8888;
+    color: var(--danger);
+    font-weight: 700;
+  }
+  /* ===== 经期日历 ===== */
+  .calendar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 4px 10px;
+  }
+  .calendar-month {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .calendar-nav-btn {
+    width: 32px; height: 32px;
+    border: none;
+    background: var(--primary-light);
+    color: var(--primary);
+    border-radius: 50%;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .calendar-nav-btn:active { background: var(--primary); color: #fff; }
+  .calendar-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    margin-bottom: 4px;
+  }
+  .calendar-weekday {
+    text-align: center;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-light);
+    padding: 4px 0;
+  }
+  .calendar-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+  }
+  .calendar-day {
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.15s;
+    padding: 0;
+  }
+  .calendar-day:active { background: var(--primary-light); }
+  .calendar-day.other-month { color: var(--text-light); opacity: 0.4; }
+  .calendar-day.today {
+    color: var(--primary);
+    font-weight: 700;
+  }
+  .calendar-day.today .day-num {
+    width: 24px; height: 24px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    border: 1.5px solid var(--primary);
+  }
+  .calendar-day.period {
+    background: linear-gradient(135deg, #ff8fa3, #ffb3c1);
+    color: #fff;
+    font-weight: 700;
+    box-shadow: 0 2px 6px rgba(255,143,163,0.3);
+  }
+  .calendar-day.predicted {
+    background: #fff8e1;
+    color: var(--warning);
+  }
+  .calendar-day.predicted::after {
+    content: '';
+    position: absolute;
+    bottom: 3px;
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--warning);
+  }
+  .calendar-legend {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 10px;
+    font-size: 10px;
+    color: var(--text-secondary);
+  }
+  .calendar-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .calendar-legend-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+  .calendar-legend-dot.period { background: var(--danger); }
+  .calendar-legend-dot.predicted { background: var(--warning); }
+  .calendar-legend-dot.today { border: 1.5px solid var(--primary); background: transparent; }
+
+  .period-history {
+    max-height: 160px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .period-history-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .period-history-item:last-child { border-bottom: none; }
+  .period-cycle-badge {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: var(--danger-light);
+    color: var(--danger);
+    font-weight: 500;
+  }
+
+  /* ===== 小树洞 ===== */
+  .treehole-entry {
+    margin-bottom: 10px;
+  }
+  .treehole-entry textarea {
+    width: 100%;
+    height: 80px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    font-size: 14px;
+    color: var(--text);
+    background: #fafbfc;
+    outline: none;
+    resize: none;
+    font-family: inherit;
+    transition: border-color 0.2s;
+  }
+  .treehole-entry textarea:focus {
+    border-color: var(--primary);
+    background: #fff;
+  }
+  .treehole-entry textarea::placeholder { color: var(--text-light); }
+  .mood-selector {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .mood-btn {
+    width: 40px; height: 40px;
+    border: 2px solid transparent;
+    border-radius: 50%;
+    background: #f5f6f8;
+    font-size: 22px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .mood-btn:active { transform: scale(0.92); }
+  .mood-btn.selected {
+    border-color: var(--primary);
+    background: var(--primary-light);
+    transform: scale(1.1);
+  }
+  .treehole-feed {
+    max-height: 260px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .treehole-post {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .treehole-post:last-child { border-bottom: none; }
+  .treehole-post-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  .treehole-post-mood {
+    font-size: 20px;
+    line-height: 1;
+  }
+  .treehole-post-date {
+    font-size: 11px;
+    color: var(--text-light);
+  }
+  .treehole-post-text {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.5;
+    word-break: break-word;
+    white-space: pre-wrap;
+  }
+  .treehole-post-delete {
+    font-size: 11px;
+    color: var(--text-light);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 4px;
+  }
+  .treehole-post-delete:active { color: var(--danger); background: var(--danger-light); }
+
+  /* ===== 头像选择弹窗 ===== */
+  .avatar-modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  .avatar-modal-overlay.show { opacity: 1; pointer-events: auto; }
+  .avatar-modal {
+    background: #fff;
+    border-radius: 20px;
+    padding: 20px;
+    width: 280px;
+    max-width: 90vw;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+  }
+  .avatar-modal h3 {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  .avatar-modal .subtitle {
+    font-size: 11px;
+    color: var(--text-light);
+    text-align: center;
+    margin-bottom: 14px;
+  }
+  .avatar-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .avatar-option {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    background: #f5f6f8;
+    font-size: 28px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+  .avatar-option:active { transform: scale(0.92); }
+  .avatar-option.selected {
+    border-color: var(--primary);
+    background: var(--primary-light);
+  }
+  .avatar-upload-btn {
+    width: 100%;
+    height: 40px;
+    border: 1.5px dashed var(--border);
+    border-radius: 14px;
+    background: #fafbfc;
+    color: var(--text-secondary);
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    margin-bottom: 10px;
+    transition: all 0.2s;
+  }
+  .avatar-upload-btn:active { border-color: var(--primary); color: var(--primary); }
+  .avatar-modal-close {
+    width: 100%;
+    height: 38px;
+    border: none;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #ff8fa3, #ffb3c1);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .avatar-modal-close:active { opacity: 0.85; }
+
+  /* ===== 设置面板 - 背景选择 ===== */
+  .bg-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .bg-option {
+    aspect-ratio: 1.6;
+    border-radius: 12px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .bg-option:active { transform: scale(0.95); }
+  .bg-option.selected { border-color: var(--primary); }
+  .bg-option.selected::after {
+    content: '✓';
+    position: absolute;
+    top: 4px; right: 6px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  }
+  .bg-option.bg-cherry-blue { background: #d6e8f7; }
+  .bg-option.bg-cherry-pink { background: #fde4ec; }
+  .bg-option.bg-cherry-lavender { background: #e8e0f0; }
+  .bg-option.bg-cherry-mint { background: #d4f0e4; }
+  .bg-option.bg-cherry-peach { background: #ffe8d6; }
+  .bg-option.bg-cherry-cream { background: #fef9ef; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--text);
+    color: #fff;
+    padding: 9px 18px;
+    border-radius: 18px;
+    font-size: 12px;
+    font-weight: 500;
+    z-index: 3000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<!-- v2025.07.30 -->
+<div class="app-shell">
+
+  <!-- ===== 左侧导航栏 ===== -->
+  <aside class="sidebar">
+    <div class="sidebar-logo" id="avatarBtn" onclick="openAvatarPicker()">
+      <span class="avatar-emoji" id="avatarEmoji">🧸</span>
+      <span class="avatar-edit-hint">更换</span>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="nav-tab active" data-panel="accounting" onclick="switchPanel('accounting')">
+        <span class="nav-icon">💰</span>
+        <span>记账</span>
+      </button>
+      <button class="nav-tab" data-panel="korean" onclick="switchPanel('korean')">
+        <span class="nav-icon">🇰🇷</span>
+        <span>韩语</span>
+      </button>
+      <button class="nav-tab" data-panel="period" onclick="switchPanel('period')">
+        <span class="nav-icon">🌸</span>
+        <span>经期</span>
+      </button>
+      <button class="nav-tab" data-panel="treehole" onclick="switchPanel('treehole')">
+        <span class="nav-icon">🌳</span>
+        <span>树洞</span>
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="settings-btn" onclick="switchPanel('settings')" title="设置">⚙️</button>
+      <span>设置</span>
+    </div>
+  </aside>
+
+  <!-- ===== 右侧内容区 ===== -->
+  <main class="main-content">
+
+    <!-- 公共 Header -->
+    <div class="content-header">
+      <div class="page-title" id="pageTitle">我的账户 · 收支记账</div>
+      <div class="date-label" id="dateLabel"></div>
+    </div>
+
+    <!-- 面板：记账 -->
+    <div class="panel active" id="panel-accounting">
+      <!-- 统计卡片 -->
+      <div class="stats-row">
+        <div class="stat-item">
+          <div class="stat-label">总支出累计</div>
+          <div class="stat-value expense" id="totalExpense">¥0</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">总存钱累计</div>
+          <div class="stat-value saving" id="totalSaving">¥0</div>
+        </div>
+      </div>
+
+      <!-- 录入表单 -->
+      <div class="card">
+        <div class="form-row">
+          <div class="input-group">
+            <label>金额 (¥)</label>
+            <input type="number" id="amountInput" placeholder="0.00" step="0.01" min="0.01" inputmode="decimal">
+          </div>
+          <div class="input-group">
+            <label>类型</label>
+            <select id="typeSelect">
+              <option value="expense">支出</option>
+              <option value="saving">存钱 / 收入</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="input-group">
+            <label>备注</label>
+            <input type="text" id="noteInput" placeholder="午餐、交通、工资…" maxlength="40">
+          </div>
+        </div>
+        <div class="form-row">
+          <button class="btn btn-primary" onclick="addRecord()" style="flex:1;">📝 保存记录</button>
+        </div>
+      </div>
+
+      <!-- 每日明细 -->
+      <div class="card">
+        <div class="expense-list-header">
+          <span class="expense-list-title">📋 每日明细</span>
+          <span class="expense-list-count" id="recordCount">共 0 条</span>
+        </div>
+        <div class="expense-list-scroll" id="expenseList">
+          <div class="empty-state">暂无记录，开始记账吧 ✍️</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 面板：韩语学习 -->
+    <div class="panel" id="panel-korean">
+      <!-- 基础音节 -->
+      <div class="card">
+        <div class="korean-block">
+          <div class="korean-block-title">🔤 今日音节</div>
+          <div class="syllable-grid" id="syllableGrid"></div>
+        </div>
+      </div>
+
+      <!-- 常用单词 -->
+      <div class="card">
+        <div class="korean-block">
+          <div class="korean-block-title">📖 今日单词 (10组) &nbsp;·&nbsp; Day <span id="dayNumber">1</span></div>
+          <div class="word-list" id="wordList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 面板：经期记录 -->
+    <div class="panel" id="panel-period">
+      <!-- 状态卡片 -->
+      <div class="card">
+        <div class="period-status-card" id="periodStatus">
+          <div class="period-phase safe" id="periodPhase">🟢 安全期</div>
+          <div class="period-countdown" id="periodCountdown">距下次预计经期还有 -- 天</div>
+        </div>
+      </div>
+
+      <!-- 日历 -->
+      <div class="card">
+        <div class="calendar-header">
+          <button class="calendar-nav-btn" onclick="changeCalendarMonth(-1)">‹</button>
+          <span class="calendar-month" id="calendarMonth">2026年7月</span>
+          <button class="calendar-nav-btn" onclick="changeCalendarMonth(1)">›</button>
+        </div>
+        <div class="calendar-weekdays">
+          <div class="calendar-weekday">日</div>
+          <div class="calendar-weekday">一</div>
+          <div class="calendar-weekday">二</div>
+          <div class="calendar-weekday">三</div>
+          <div class="calendar-weekday">四</div>
+          <div class="calendar-weekday">五</div>
+          <div class="calendar-weekday">六</div>
+        </div>
+        <div class="calendar-days" id="calendarDays"></div>
+        <div class="calendar-legend">
+          <div class="calendar-legend-item"><div class="calendar-legend-dot period"></div>经期</div>
+          <div class="calendar-legend-item"><div class="calendar-legend-dot predicted"></div>预测</div>
+          <div class="calendar-legend-item"><div class="calendar-legend-dot today"></div>今天</div>
+        </div>
+      </div>
+
+      <!-- 历史记录 -->
+      <div class="card">
+        <div class="expense-list-header">
+          <span class="expense-list-title">📋 经期记录</span>
+          <span class="expense-list-count" id="periodCycleInfo">周期 -- 天</span>
+        </div>
+        <div class="period-history" id="periodHistory">
+          <div class="empty-state">暂无记录，点击日历上的日期开始记录</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 面板：小树洞 -->
+    <div class="panel" id="panel-treehole">
+      <div class="card treehole-entry">
+        <div class="mood-selector" id="moodSelector">
+          <button class="mood-btn selected" data-mood="😊" onclick="selectMood('😊', this)">😊</button>
+          <button class="mood-btn" data-mood="😄" onclick="selectMood('😄', this)">😄</button>
+          <button class="mood-btn" data-mood="😢" onclick="selectMood('😢', this)">😢</button>
+          <button class="mood-btn" data-mood="😤" onclick="selectMood('😤', this)">😤</button>
+          <button class="mood-btn" data-mood="🥰" onclick="selectMood('🥰', this)">🥰</button>
+          <button class="mood-btn" data-mood="😴" onclick="selectMood('😴', this)">😴</button>
+        </div>
+        <textarea id="treeholeText" placeholder="今天发生了什么？写下你的心情或小秘密…" maxlength="500"></textarea>
+        <div class="form-row" style="margin-top:8px;">
+          <button class="btn btn-primary" onclick="addTreeholePost()" style="flex:1;">🌳 藏进树洞</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="expense-list-header">
+          <span class="expense-list-title">📝 心情记录</span>
+          <span class="expense-list-count" id="treeholeCount">共 0 条</span>
+        </div>
+        <div class="treehole-feed" id="treeholeFeed">
+          <div class="empty-state">还没有记录，写下你的第一个心情吧 🌱</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 面板：设置 -->
+    <div class="panel" id="panel-settings">
+      <div class="card">
+        <div style="font-size:13px;font-weight:600;margin-bottom:12px;">🎨 更换背景主题</div>
+        <div class="bg-grid" id="bgGrid">
+          <div class="bg-option bg-cherry-blue" data-bg="cherry-blue" onclick="setBackground('cherry-blue', this)"></div>
+          <div class="bg-option bg-cherry-pink" data-bg="cherry-pink" onclick="setBackground('cherry-pink', this)"></div>
+          <div class="bg-option bg-cherry-lavender" data-bg="cherry-lavender" onclick="setBackground('cherry-lavender', this)"></div>
+          <div class="bg-option bg-cherry-mint" data-bg="cherry-mint" onclick="setBackground('cherry-mint', this)"></div>
+          <div class="bg-option bg-cherry-peach" data-bg="cherry-peach" onclick="setBackground('cherry-peach', this)"></div>
+          <div class="bg-option bg-cherry-cream" data-bg="cherry-cream" onclick="setBackground('cherry-cream', this)"></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+</div>
+
+<!-- 头像选择弹窗 -->
+<div class="avatar-modal-overlay" id="avatarModal">
+  <div class="avatar-modal">
+    <h3>🎀 选择头像</h3>
+    <div class="subtitle">选一个喜欢的头像，或上传照片</div>
+    <div class="avatar-grid" id="avatarGrid">
+      <button class="avatar-option" data-avatar="🧸" onclick="selectAvatar('🧸', this)">🧸</button>
+      <button class="avatar-option" data-avatar="🐰" onclick="selectAvatar('🐰', this)">🐰</button>
+      <button class="avatar-option" data-avatar="🐱" onclick="selectAvatar('🐱', this)">🐱</button>
+      <button class="avatar-option" data-avatar="🐶" onclick="selectAvatar('🐶', this)">🐶</button>
+      <button class="avatar-option" data-avatar="🐼" onclick="selectAvatar('🐼', this)">🐼</button>
+      <button class="avatar-option" data-avatar="🦊" onclick="selectAvatar('🦊', this)">🦊</button>
+      <button class="avatar-option" data-avatar="🐨" onclick="selectAvatar('🐨', this)">🐨</button>
+      <button class="avatar-option" data-avatar="🐸" onclick="selectAvatar('🐸', this)">🐸</button>
+      <button class="avatar-option" data-avatar="🦄" onclick="selectAvatar('🦄', this)">🦄</button>
+      <button class="avatar-option" data-avatar="🌸" onclick="selectAvatar('🌸', this)">🌸</button>
+      <button class="avatar-option" data-avatar="🍒" onclick="selectAvatar('🍒', this)">🍒</button>
+      <button class="avatar-option" data-avatar="⭐" onclick="selectAvatar('⭐', this)">⭐</button>
+    </div>
+    <input type="file" id="avatarFileInput" accept="image/*" style="display:none;" onchange="handleAvatarUpload(event)">
+    <button class="avatar-upload-btn" onclick="document.getElementById('avatarFileInput').click()">📷 从相册上传</button>
+    <button class="avatar-modal-close" onclick="closeAvatarPicker()">完成</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Install Banner -->
+<div id="installBanner" style="display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#ff8fa3,#ffb3c1);color:#fff;padding:12px 22px;border-radius:24px;font-size:13px;font-weight:600;z-index:999;cursor:pointer;box-shadow:0 4px 16px rgba(255,143,163,0.4);" onclick="installPWA()">
+  📲 点击添加到主屏幕
+</div>
+
+<script>
+// ==========================================
+// 面板切换
+// ==========================================
+function switchPanel(name) {
+  // 切换内容面板
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+
+  // 切换导航 Tab
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector('[data-panel="' + name + '"]').classList.add('active');
+
+  // 更新标题
+  const titles = { accounting: '我的账户 · 收支记账', korean: '韩语初学者入门', period: '经期记录 · 健康管理', treehole: '小树洞 · 心情日记', settings: '⚙️ 设置' };
+  document.getElementById('pageTitle').textContent = titles[name] || '';
+
+  // 切换到韩语面板时刷新内容
+  if (name === 'korean') renderKoreanContent();
+  // 切换到经期/树洞/设置面板时刷新内容
+  if (name === 'period') refreshPeriodUI();
+  if (name === 'treehole') refreshTreeholeUI();
+  if (name === 'settings') refreshSettingsUI();
+}
+
+// ==========================================
+// 数据层
+// ==========================================
+const STORAGE_KEY = 'workbuddy_accounting';
+
+function loadRecords() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function saveRecords(records) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+}
+
+// ==========================================
+// Toast 提示
+// ==========================================
+let toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 1800);
+}
+
+// ==========================================
+// 记账模块
+// ==========================================
+function addRecord() {
+  const amountInput = document.getElementById('amountInput');
+  const typeSelect = document.getElementById('typeSelect');
+  const noteInput = document.getElementById('noteInput');
+
+  const amount = parseFloat(amountInput.value);
+  if (isNaN(amount) || amount <= 0) {
+    showToast('请输入有效金额');
+    amountInput.focus();
+    return;
+  }
+
+  const type = typeSelect.value;
+  const note = noteInput.value.trim() || (type === 'expense' ? '日常开支' : '存钱记录');
+  const now = new Date();
+
+  const record = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    amount: amount,
+    type: type,
+    note: note,
+    date: now.toISOString().split('T')[0],
+    time: now.toTimeString().split(' ')[0].slice(0, 5),
+    timestamp: now.getTime()
+  };
+
+  const records = loadRecords();
+  records.unshift(record);
+  saveRecords(records);
+
+  amountInput.value = '';
+  noteInput.value = '';
+  amountInput.focus();
+
+  refreshUI();
+  showToast('✅ 已保存');
+}
+
+function deleteRecord(id) {
+  let records = loadRecords();
+  records = records.filter(r => r.id !== id);
+  saveRecords(records);
+  refreshUI();
+  showToast('已删除');
+}
+
+function refreshUI() {
+  const records = loadRecords();
+  const totalExpense = records
+    .filter(r => r.type === 'expense')
+    .reduce((sum, r) => sum + r.amount, 0);
+  const totalSaving = records
+    .filter(r => r.type === 'saving')
+    .reduce((sum, r) => sum + r.amount, 0);
+
+  document.getElementById('totalExpense').textContent = '¥' + totalExpense.toFixed(2);
+  document.getElementById('totalSaving').textContent = '¥' + totalSaving.toFixed(2);
+  document.getElementById('recordCount').textContent = '共 ' + records.length + ' 条';
+
+  const listEl = document.getElementById('expenseList');
+  if (records.length === 0) {
+    listEl.innerHTML = '<div class="empty-state">暂无记录，开始记账吧 ✍️</div>';
+  } else {
+    listEl.innerHTML = records.map(r => `
+      <div class="expense-item">
+        <div class="expense-info">
+          <div class="expense-note">
+            <span class="expense-type-tag ${r.type === 'expense' ? 'out' : 'in'}">${r.type === 'expense' ? '支' : '存'}</span>
+            ${r.note}
+          </div>
+          <div class="expense-meta">${r.date} ${r.time}</div>
+        </div>
+        <span class="expense-amount ${r.type === 'expense' ? 'out' : 'in'}">¥${r.amount.toFixed(2)}</span>
+        <button class="delete-btn" onclick="deleteRecord('${r.id}')">×</button>
+      </div>
+    `).join('');
+  }
+}
+
+// ==========================================
+// 韩语学习模块 — 内容库
+// ==========================================
+const SYLLABLES = [
+  { char: '가', roman: 'ga', hint: 'ㄱ+ㅏ' },
+  { char: '나', roman: 'na', hint: 'ㄴ+ㅏ' },
+  { char: '다', roman: 'da', hint: 'ㄷ+ㅏ' },
+  { char: '라', roman: 'ra', hint: 'ㄹ+ㅏ' },
+  { char: '마', roman: 'ma', hint: 'ㅁ+ㅏ' },
+  { char: '바', roman: 'ba', hint: 'ㅂ+ㅏ' },
+  { char: '사', roman: 'sa', hint: 'ㅅ+ㅏ' },
+  { char: '아', roman: 'a', hint: 'ㅇ+ㅏ' },
+  { char: '자', roman: 'ja', hint: 'ㅈ+ㅏ' },
+  { char: '차', roman: 'cha', hint: 'ㅊ+ㅏ' },
+  { char: '카', roman: 'ka', hint: 'ㅋ+ㅏ' },
+  { char: '타', roman: 'ta', hint: 'ㅌ+ㅏ' },
+  { char: '파', roman: 'pa', hint: 'ㅍ+ㅏ' },
+  { char: '하', roman: 'ha', hint: 'ㅎ+ㅏ' },
+  { char: '거', roman: 'geo', hint: 'ㄱ+ㅓ' },
+  { char: '너', roman: 'neo', hint: 'ㄴ+ㅓ' },
+  { char: '더', roman: 'deo', hint: 'ㄷ+ㅓ' },
+  { char: '러', roman: 'reo', hint: 'ㄹ+ㅓ' },
+  { char: '머', roman: 'meo', hint: 'ㅁ+ㅓ' },
+  { char: '버', roman: 'beo', hint: 'ㅂ+ㅓ' },
+  { char: '서', roman: 'seo', hint: 'ㅅ+ㅓ' },
+  { char: '어', roman: 'eo', hint: 'ㅇ+ㅓ' },
+  { char: '저', roman: 'jeo', hint: 'ㅈ+ㅓ' },
+  { char: '처', roman: 'cheo', hint: 'ㅊ+ㅓ' },
+  { char: '커', roman: 'keo', hint: 'ㅋ+ㅓ' },
+  { char: '터', roman: 'teo', hint: 'ㅌ+ㅓ' },
+  { char: '퍼', roman: 'peo', hint: 'ㅍ+ㅓ' },
+  { char: '허', roman: 'heo', hint: 'ㅎ+ㅓ' },
+  { char: '고', roman: 'go', hint: 'ㄱ+ㅗ' },
+  { char: '노', roman: 'no', hint: 'ㄴ+ㅗ' },
+  { char: '도', roman: 'do', hint: 'ㄷ+ㅗ' },
+  { char: '로', roman: 'ro', hint: 'ㄹ+ㅗ' },
+  { char: '모', roman: 'mo', hint: 'ㅁ+ㅗ' },
+  { char: '보', roman: 'bo', hint: 'ㅂ+ㅗ' },
+  { char: '소', roman: 'so', hint: 'ㅅ+ㅗ' },
+  { char: '오', roman: 'o', hint: 'ㅇ+ㅗ' },
+  { char: '조', roman: 'jo', hint: 'ㅈ+ㅗ' },
+  { char: '초', roman: 'cho', hint: 'ㅊ+ㅗ' },
+  { char: '코', roman: 'ko', hint: 'ㅋ+ㅗ' },
+  { char: '토', roman: 'to', hint: 'ㅌ+ㅗ' },
+  { char: '포', roman: 'po', hint: 'ㅍ+ㅗ' },
+  { char: '호', roman: 'ho', hint: 'ㅎ+ㅗ' },
+  { char: '구', roman: 'gu', hint: 'ㄱ+ㅜ' },
+  { char: '누', roman: 'nu', hint: 'ㄴ+ㅜ' },
+  { char: '두', roman: 'du', hint: 'ㄷ+ㅜ' },
+  { char: '루', roman: 'ru', hint: 'ㄹ+ㅜ' },
+  { char: '무', roman: 'mu', hint: 'ㅁ+ㅜ' },
+  { char: '부', roman: 'bu', hint: 'ㅂ+ㅜ' },
+  { char: '수', roman: 'su', hint: 'ㅅ+ㅜ' },
+  { char: '우', roman: 'u', hint: 'ㅇ+ㅜ' },
+  { char: '주', roman: 'ju', hint: 'ㅈ+ㅜ' },
+  { char: '추', roman: 'chu', hint: 'ㅊ+ㅜ' },
+  { char: '쿠', roman: 'ku', hint: 'ㅋ+ㅜ' },
+  { char: '투', roman: 'tu', hint: 'ㅌ+ㅜ' },
+  { char: '푸', roman: 'pu', hint: 'ㅍ+ㅜ' },
+  { char: '후', roman: 'hu', hint: 'ㅎ+ㅜ' },
+  { char: '기', roman: 'gi', hint: 'ㄱ+ㅣ' },
+  { char: '니', roman: 'ni', hint: 'ㄴ+ㅣ' },
+  { char: '디', roman: 'di', hint: 'ㄷ+ㅣ' },
+  { char: '리', roman: 'ri', hint: 'ㄹ+ㅣ' },
+  { char: '미', roman: 'mi', hint: 'ㅁ+ㅣ' },
+  { char: '비', roman: 'bi', hint: 'ㅂ+ㅣ' },
+  { char: '시', roman: 'si', hint: 'ㅅ+ㅣ' },
+  { char: '이', roman: 'i', hint: 'ㅇ+ㅣ' },
+  { char: '지', roman: 'ji', hint: 'ㅈ+ㅣ' },
+  { char: '치', roman: 'chi', hint: 'ㅊ+ㅣ' },
+  { char: '키', roman: 'ki', hint: 'ㅋ+ㅣ' },
+  { char: '티', roman: 'ti', hint: 'ㅌ+ㅣ' },
+  { char: '피', roman: 'pi', hint: 'ㅍ+ㅣ' },
+  { char: '히', roman: 'hi', hint: 'ㅎ+ㅣ' },
+  { char: '개', roman: 'gae', hint: 'ㄱ+ㅐ' },
+  { char: '네', roman: 'ne', hint: 'ㄴ+ㅔ' },
+  { char: '돼', roman: 'dwae', hint: 'ㄷ+ㅙ' },
+  { char: '뭐', roman: 'mwo', hint: 'ㅁ+ㅝ' },
+  { char: '쇠', roman: 'soe', hint: 'ㅅ+ㅚ' },
+  { char: '왜', roman: 'wae', hint: 'ㅇ+ㅙ' },
+  { char: '줘', roman: 'jwo', hint: 'ㅈ+ㅝ' },
+  { char: '취', roman: 'chwi', hint: 'ㅊ+ㅟ' },
+  { char: '퀴', roman: 'kwi', hint: 'ㅋ+ㅟ' },
+  { char: '희', roman: 'hui', hint: 'ㅎ+ㅢ' },
+];
+
+const WORDS = [
+  { ko: '안녕하세요', zh: '你好' },
+  { ko: '감사합니다', zh: '谢谢' },
+  { ko: '미안합니다', zh: '对不起' },
+  { ko: '저', zh: '我 (谦称)' },
+  { ko: '나', zh: '我' },
+  { ko: '너', zh: '你' },
+  { ko: '우리', zh: '我们' },
+  { ko: '친구', zh: '朋友' },
+  { ko: '가족', zh: '家人' },
+  { ko: '선생님', zh: '老师' },
+  { ko: '물', zh: '水' },
+  { ko: '밥', zh: '饭' },
+  { ko: '빵', zh: '面包' },
+  { ko: '우유', zh: '牛奶' },
+  { ko: '커피', zh: '咖啡' },
+  { ko: '차', zh: '茶 / 车' },
+  { ko: '책', zh: '书' },
+  { ko: '가방', zh: '包' },
+  { ko: '신발', zh: '鞋子' },
+  { ko: '옷', zh: '衣服' },
+  { ko: '집', zh: '家' },
+  { ko: '학교', zh: '学校' },
+  { ko: '회사', zh: '公司' },
+  { ko: '병원', zh: '医院' },
+  { ko: '가게', zh: '商店' },
+  { ko: '공원', zh: '公园' },
+  { ko: '식당', zh: '餐厅' },
+  { ko: '화장실', zh: '洗手间' },
+  { ko: '도서관', zh: '图书馆' },
+  { ko: '은행', zh: '银行' },
+  { ko: '가다', zh: '去' },
+  { ko: '오다', zh: '来' },
+  { ko: '먹다', zh: '吃' },
+  { ko: '마시다', zh: '喝' },
+  { ko: '보다', zh: '看' },
+  { ko: '듣다', zh: '听' },
+  { ko: '읽다', zh: '读' },
+  { ko: '쓰다', zh: '写 / 用' },
+  { ko: '자다', zh: '睡觉' },
+  { ko: '일어나다', zh: '起床' },
+  { ko: '좋다', zh: '好' },
+  { ko: '나쁘다', zh: '坏' },
+  { ko: '크다', zh: '大' },
+  { ko: '작다', zh: '小' },
+  { ko: '많다', zh: '多' },
+  { ko: '적다', zh: '少' },
+  { ko: '예쁘다', zh: '漂亮' },
+  { ko: '맛있다', zh: '好吃' },
+  { ko: '재미있다', zh: '有趣' },
+  { ko: '바쁘다', zh: '忙' },
+  { ko: '하나', zh: '一' },
+  { ko: '둘', zh: '二' },
+  { ko: '셋', zh: '三' },
+  { ko: '오늘', zh: '今天' },
+  { ko: '내일', zh: '明天' },
+  { ko: '어제', zh: '昨天' },
+  { ko: '지금', zh: '现在' },
+  { ko: '아침', zh: '早上' },
+  { ko: '저녁', zh: '晚上' },
+  { ko: '시간', zh: '时间' },
+  { ko: '사랑', zh: '爱' },
+  { ko: '돈', zh: '钱' },
+  { ko: '이름', zh: '名字' },
+  { ko: '나라', zh: '国家' },
+  { ko: '한국', zh: '韩国' },
+  { ko: '중국', zh: '中国' },
+  { ko: '사람', zh: '人' },
+  { ko: '생일', zh: '生日' },
+  { ko: '날씨', zh: '天气' },
+  { ko: '전화', zh: '电话' },
+  { ko: '음악', zh: '音乐' },
+  { ko: '영화', zh: '电影' },
+  { ko: '여행', zh: '旅行' },
+  { ko: '공부', zh: '学习' },
+  { ko: '사진', zh: '照片' },
+  { ko: '고양이', zh: '猫' },
+  { ko: '강아지', zh: '小狗' },
+  { ko: '꽃', zh: '花' },
+  { ko: '하늘', zh: '天空' },
+  { ko: '바다', zh: '大海' },
+  { ko: '산', zh: '山' },
+  { ko: '길', zh: '路' },
+  { ko: '마음', zh: '心' },
+  { ko: '생각', zh: '想法' },
+  { ko: '이야기', zh: '故事' },
+  { ko: '약속', zh: '约定' },
+  { ko: '선물', zh: '礼物' },
+  { ko: '기분', zh: '心情' },
+  { ko: '소리', zh: '声音' },
+  { ko: '꿈', zh: '梦' },
+];
+
+function seededRandom(seed) {
+  let s = seed;
+  return function() {
+    s = (s * 16807) % 2147483647;
+    return (s - 1) / 2147483646;
+  };
+}
+
+function shuffleWithSeed(arr, seed) {
+  const rng = seededRandom(seed);
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function getDayNumber() {
+  const start = new Date(2025, 0, 1);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diff = Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+  return Math.max(1, diff + 1);
+}
+
+function renderKoreanContent() {
+  const day = getDayNumber();
+  document.getElementById('dayNumber').textContent = day;
+
+  const syllableStart = ((day - 1) * 3) % SYLLABLES.length;
+  const todaySyllables = [];
+  for (let i = 0; i < 3; i++) {
+    todaySyllables.push(SYLLABLES[(syllableStart + i) % SYLLABLES.length]);
+  }
+
+  document.getElementById('syllableGrid').innerHTML = todaySyllables.map((s, i) => `
+    <div class="syllable-card" onclick="speakKorean('${s.char}', this)" data-text="${s.char}">
+      <div class="syllable-char">${s.char}</div>
+      <div class="syllable-roman">/${s.roman}/</div>
+      <div class="syllable-hint">${s.hint}</div>
+      <div class="syllable-speaker">🔊</div>
+    </div>
+  `).join('');
+
+  const shuffled = shuffleWithSeed(WORDS, day);
+  const wordStart = ((day - 1) * 10) % shuffled.length;
+  const todayWords = [];
+  for (let i = 0; i < 10; i++) {
+    todayWords.push(shuffled[(wordStart + i) % shuffled.length]);
+  }
+
+  document.getElementById('wordList').innerHTML = todayWords.map(w => `
+    <div class="word-item" onclick="speakKorean('${w.ko}', this)" data-text="${w.ko}">
+      <div class="word-korean">${w.ko}<span class="word-speaker">🔊</span></div>
+      <div class="word-meaning">${w.zh}</div>
+    </div>
+  `).join('');
+}
+
+// ==========================================
+// TTS 韩语发音
+// ==========================================
+let ttsSpeaking = null;
+
+function speakKorean(text, el) {
+  // 移除之前的高亮
+  if (ttsSpeaking) {
+    ttsSpeaking.classList.remove('speaking');
+  }
+
+  // 取消正在播放的语音
+  window.speechSynthesis.cancel();
+
+  // 高亮当前元素
+  el.classList.add('speaking');
+  ttsSpeaking = el;
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'ko-KR';
+  utterance.rate = 0.8;
+  utterance.pitch = 1;
+
+  utterance.onend = function() {
+    el.classList.remove('speaking');
+    ttsSpeaking = null;
+  };
+  utterance.onerror = function() {
+    el.classList.remove('speaking');
+    ttsSpeaking = null;
+  };
+
+  window.speechSynthesis.speak(utterance);
+}
+
+// ==========================================
+// 日期显示
+// ==========================================
+function renderDate() {
+  const now = new Date();
+  const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
+  const str = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 星期${weekDays[now.getDay()]}`;
+  document.getElementById('dateLabel').textContent = str;
+}
+
+// ==========================================
+// 经期记录模块（日历版）
+// ==========================================
+const PERIOD_KEY = 'workbuddy_period';
+let calendarYear = new Date().getFullYear();
+let calendarMonth = new Date().getMonth();
+
+function loadPeriodData() {
+  try {
+    const raw = localStorage.getItem(PERIOD_KEY);
+    return raw ? JSON.parse(raw) : { cycles: [], avgCycle: 28, avgDuration: 5 };
+  } catch { return { cycles: [], avgCycle: 28, avgDuration: 5 }; }
+}
+
+function savePeriodData(data) {
+  localStorage.setItem(PERIOD_KEY, JSON.stringify(data));
+}
+
+// 获取所有已标记的经期日期
+function getAllPeriodDays(data) {
+  const days = new Set();
+  for (const c of data.cycles) {
+    for (const d of c.days) days.add(d);
+  }
+  return days;
+}
+
+// 获取预测的经期日期
+function getPredictedDays(data) {
+  const days = new Set();
+  if (data.cycles.length === 0) return days;
+  const lastStart = new Date(data.cycles[data.cycles.length - 1].start);
+  // 预测下次经期开始日 ±2 天
+  const nextStart = new Date(lastStart.getTime() + data.avgCycle * 86400000);
+  for (let i = -2; i <= 2; i++) {
+    const d = new Date(nextStart.getTime() + i * 86400000);
+    days.add(d.toISOString().split('T')[0]);
+  }
+  return days;
+}
+
+function changeCalendarMonth(delta) {
+  calendarMonth += delta;
+  if (calendarMonth > 11) { calendarMonth = 0; calendarYear++; }
+  if (calendarMonth < 0) { calendarMonth = 11; calendarYear--; }
+  renderCalendar();
+}
+
+function renderCalendar() {
+  document.getElementById('calendarMonth').textContent = calendarYear + '年' + (calendarMonth + 1) + '月';
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayStr = today.toISOString().split('T')[0];
+
+  const data = loadPeriodData();
+  const periodDays = getAllPeriodDays(data);
+  const predictedDays = getPredictedDays(data);
+
+  const firstDay = new Date(calendarYear, calendarMonth, 1);
+  const lastDay = new Date(calendarYear, calendarMonth + 1, 0);
+  const startWeekday = firstDay.getDay();
+  const totalDays = lastDay.getDate();
+
+  let html = '';
+
+  // 填充上月末尾
+  const prevMonthLastDay = new Date(calendarYear, calendarMonth, 0).getDate();
+  for (let i = startWeekday - 1; i >= 0; i--) {
+    const d = prevMonthLastDay - i;
+    html += '<button class="calendar-day other-month"><span class="day-num">' + d + '</span></button>';
+  }
+
+  // 当月
+  for (let d = 1; d <= totalDays; d++) {
+    const dateStr = new Date(calendarYear, calendarMonth, d).toISOString().split('T')[0];
+    let cls = '';
+    if (dateStr === todayStr) cls += ' today';
+    if (periodDays.has(dateStr)) cls += ' period';
+    else if (predictedDays.has(dateStr)) cls += ' predicted';
+    html += '<button class="calendar-day' + cls + '" onclick="togglePeriodDate(\'' + dateStr + '\')">' +
+            '<span class="day-num">' + d + '</span></button>';
+  }
+
+  // 填充下月开头
+  const endWeekday = lastDay.getDay();
+  const remaining = 6 - endWeekday;
+  for (let d = 1; d <= remaining; d++) {
+    html += '<button class="calendar-day other-month"><span class="day-num">' + d + '</span></button>';
+  }
+
+  document.getElementById('calendarDays').innerHTML = html;
+}
+
+function togglePeriodDate(dateStr) {
+  const data = loadPeriodData();
+  const date = new Date(dateStr);
+  date.setHours(0, 0, 0, 0);
+
+  // 找包含该日期的周期
+  let foundCycle = null;
+  let foundIdx = -1;
+  for (let i = 0; i < data.cycles.length; i++) {
+    if (data.cycles[i].days.includes(dateStr)) {
+      foundCycle = data.cycles[i];
+      foundIdx = i;
+      break;
+    }
+  }
+
+  if (foundCycle) {
+    // 取消标记
+    const dayIdx = foundCycle.days.indexOf(dateStr);
+    foundCycle.days.splice(dayIdx, 1);
+    if (foundCycle.days.length === 0) {
+      data.cycles.splice(foundIdx, 1);
+    } else {
+      // 重新计算 start/end
+      foundCycle.days.sort();
+      foundCycle.start = foundCycle.days[0];
+      foundCycle.end = foundCycle.days[foundCycle.days.length - 1];
+    }
+    showToast('已取消标记');
+  } else {
+    // 新标记
+    // 找相邻日期是否有已有周期
+    const prevDay = new Date(date.getTime() - 86400000).toISOString().split('T')[0];
+    const nextDay = new Date(date.getTime() + 86400000).toISOString().split('T')[0];
+
+    let mergedCycle = null;
+    for (const c of data.cycles) {
+      if (c.days.includes(prevDay) || c.days.includes(nextDay)) {
+        mergedCycle = c;
+        break;
+      }
+    }
+
+    if (mergedCycle) {
+      mergedCycle.days.push(dateStr);
+      mergedCycle.days.sort();
+      mergedCycle.start = mergedCycle.days[0];
+      mergedCycle.end = mergedCycle.days[mergedCycle.days.length - 1];
+    } else {
+      data.cycles.push({
+        start: dateStr,
+        end: dateStr,
+        days: [dateStr]
+      });
+    }
+    showToast('✅ 已标记');
+  }
+
+  // 重新计算平均周期
+  if (data.cycles.length >= 2) {
+    data.cycles.sort((a, b) => new Date(a.start) - new Date(b.start));
+    let totalDays = 0;
+    let count = 0;
+    for (let i = 1; i < data.cycles.length; i++) {
+      const diff = Math.round((new Date(data.cycles[i].start) - new Date(data.cycles[i - 1].start)) / 86400000);
+      if (diff > 15 && diff < 60) {
+        totalDays += diff;
+        count++;
+      }
+    }
+    if (count > 0) data.avgCycle = Math.round(totalDays / count);
+  }
+
+  savePeriodData(data);
+  renderCalendar();
+  refreshPeriodStatus();
+  refreshPeriodHistory();
+}
+
+function refreshPeriodStatus() {
+  const data = loadPeriodData();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayStr = today.toISOString().split('T')[0];
+
+  const periodDays = getAllPeriodDays(data);
+  const isPeriodDay = periodDays.has(todayStr);
+
+  let phaseText, phaseClass, countdownText;
+  if (isPeriodDay) {
+    // 找今天属于哪个周期，计算第几天
+    let dayNum = 1;
+    for (const c of data.cycles) {
+      if (c.days.includes(todayStr)) {
+        dayNum = c.days.indexOf(todayStr) + 1;
+        break;
+      }
+    }
+    phaseText = '🩸 经期第 ' + dayNum + ' 天';
+    phaseClass = 'active';
+    countdownText = '注意休息，多喝热水 ❤️';
+  } else {
+    const lastStart = data.cycles.length > 0 ? new Date(data.cycles[data.cycles.length - 1].start) : null;
+    if (lastStart) {
+      const nextPredicted = new Date(lastStart.getTime() + data.avgCycle * 86400000);
+      const daysUntil = Math.round((nextPredicted - today) / 86400000);
+      if (daysUntil <= 3 && daysUntil > 0) {
+        phaseText = '🟡 经期临近';
+        phaseClass = 'soon';
+        countdownText = '预计 ' + daysUntil + ' 天后，提前准备哦';
+      } else if (daysUntil <= 0) {
+        phaseText = '🟡 经期可能延迟';
+        phaseClass = 'soon';
+        countdownText = '周期 ' + data.avgCycle + ' 天，已超过预计日期';
+      } else {
+        phaseText = '🟢 安全期';
+        phaseClass = 'safe';
+        countdownText = '距下次预计经期还有 ' + daysUntil + ' 天';
+      }
+    } else {
+      phaseText = '🟢 等待首次记录';
+      phaseClass = 'safe';
+      countdownText = '点击日历上的日期开始记录';
+    }
+  }
+
+  document.getElementById('periodPhase').textContent = phaseText;
+  document.getElementById('periodPhase').className = 'period-phase ' + phaseClass;
+  document.getElementById('periodCountdown').textContent = countdownText;
+}
+
+function refreshPeriodHistory() {
+  const data = loadPeriodData();
+  const historyEl = document.getElementById('periodHistory');
+  if (data.cycles.length === 0) {
+    historyEl.innerHTML = '<div class="empty-state">暂无记录，点击日历上的日期开始记录</div>';
+  } else {
+    historyEl.innerHTML = data.cycles.slice().reverse().map((c, i) => {
+      const end = c.end || '进行中';
+      return `
+        <div class="period-history-item">
+          <div style="flex:1;">
+            <span class="period-cycle-badge">${c.days.length}天</span>
+            <span style="margin-left:6px;">${c.start} → ${end}</span>
+          </div>
+          <span style="font-size:10px;color:var(--text-light);">#${data.cycles.length - i}</span>
+        </div>
+      `;
+    }).join('');
+  }
+  document.getElementById('periodCycleInfo').textContent = '周期 ' + data.avgCycle + ' 天';
+}
+
+function refreshPeriodUI() {
+  renderCalendar();
+  refreshPeriodStatus();
+  refreshPeriodHistory();
+}
+
+// ==========================================
+// 小树洞模块
+// ==========================================
+const TREEHOLE_KEY = 'workbuddy_treehole';
+let currentMood = '😊';
+
+function loadTreeholePosts() {
+  try {
+    const raw = localStorage.getItem(TREEHOLE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function saveTreeholePosts(posts) {
+  localStorage.setItem(TREEHOLE_KEY, JSON.stringify(posts));
+}
+
+function selectMood(mood, btn) {
+  currentMood = mood;
+  document.querySelectorAll('#moodSelector .mood-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+
+function addTreeholePost() {
+  const textEl = document.getElementById('treeholeText');
+  const text = textEl.value.trim();
+  if (!text) {
+    showToast('写点什么吧 🌱');
+    textEl.focus();
+    return;
+  }
+
+  const now = new Date();
+  const post = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    mood: currentMood,
+    text: text,
+    date: now.toISOString().split('T')[0],
+    time: now.toTimeString().split(' ')[0].slice(0, 5),
+    timestamp: now.getTime()
+  };
+
+  const posts = loadTreeholePosts();
+  posts.unshift(post);
+  saveTreeholePosts(posts);
+
+  textEl.value = '';
+  refreshTreeholeUI();
+  showToast('🌳 已藏进树洞');
+}
+
+function deleteTreeholePost(id) {
+  let posts = loadTreeholePosts();
+  posts = posts.filter(p => p.id !== id);
+  saveTreeholePosts(posts);
+  refreshTreeholeUI();
+  showToast('已删除');
+}
+
+function refreshTreeholeUI() {
+  const posts = loadTreeholePosts();
+  document.getElementById('treeholeCount').textContent = '共 ' + posts.length + ' 条';
+
+  const feedEl = document.getElementById('treeholeFeed');
+  if (posts.length === 0) {
+    feedEl.innerHTML = '<div class="empty-state">还没有记录，写下你的第一个心情吧 🌱</div>';
+  } else {
+    feedEl.innerHTML = posts.map(p => `
+      <div class="treehole-post">
+        <div class="treehole-post-header">
+          <span class="treehole-post-mood">${p.mood}</span>
+          <div>
+            <span class="treehole-post-date">${p.date} ${p.time}</span>
+            <button class="treehole-post-delete" onclick="deleteTreeholePost('${p.id}')">删除</button>
+          </div>
+        </div>
+        <div class="treehole-post-text">${p.text}</div>
+      </div>
+    `).join('');
+  }
+}
+
+// ==========================================
+// 头像模块
+// ==========================================
+const AVATAR_KEY = 'workbuddy_avatar';
+let tempAvatar = null;
+
+function loadAvatar() {
+  try {
+    const saved = localStorage.getItem(AVATAR_KEY);
+    return saved ? JSON.parse(saved) : { type: 'emoji', value: '🧸' };
+  } catch { return { type: 'emoji', value: '🧸' }; }
+}
+
+function saveAvatar(avatar) {
+  localStorage.setItem(AVATAR_KEY, JSON.stringify(avatar));
+}
+
+function renderAvatar() {
+  const avatar = loadAvatar();
+  const el = document.getElementById('avatarEmoji');
+  if (avatar.type === 'emoji') {
+    el.textContent = avatar.value;
+    el.style.backgroundImage = 'none';
+    el.style.display = 'flex';
+  } else if (avatar.type === 'image') {
+    el.textContent = '';
+    el.style.backgroundImage = 'url(' + avatar.value + ')';
+    el.style.backgroundSize = 'cover';
+    el.style.backgroundPosition = 'center';
+    el.style.display = 'flex';
+  }
+}
+
+function openAvatarPicker() {
+  document.getElementById('avatarModal').classList.add('show');
+  const current = loadAvatar();
+  tempAvatar = current;
+  // 高亮当前选中的
+  document.querySelectorAll('#avatarGrid .avatar-option').forEach(b => {
+    b.classList.toggle('selected', current.type === 'emoji' && b.dataset.avatar === current.value);
+  });
+}
+
+function closeAvatarPicker() {
+  if (tempAvatar) {
+    saveAvatar(tempAvatar);
+    renderAvatar();
+  }
+  document.getElementById('avatarModal').classList.remove('show');
+  showToast('✅ 头像已更新');
+}
+
+function selectAvatar(emoji, btn) {
+  document.querySelectorAll('#avatarGrid .avatar-option').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  tempAvatar = { type: 'emoji', value: emoji };
+}
+
+function handleAvatarUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    tempAvatar = { type: 'image', value: e.target.result };
+    document.querySelectorAll('#avatarGrid .avatar-option').forEach(b => b.classList.remove('selected'));
+  };
+  reader.readAsDataURL(file);
+  event.target.value = '';
+}
+
+// ==========================================
+// 背景设置模块
+// ==========================================
+const BG_KEY = 'workbuddy_bg';
+const bgColors = {
+  'cherry-blue':    '#d6e8f7',
+  'cherry-pink':    '#fde4ec',
+  'cherry-lavender': '#e8e0f0',
+  'cherry-mint':    '#d4f0e4',
+  'cherry-peach':   '#ffe8d6',
+  'cherry-cream':   '#fef9ef'
+};
+
+function loadBg() {
+  return localStorage.getItem(BG_KEY) || 'cherry-blue';
+}
+
+function saveBg(name) {
+  localStorage.setItem(BG_KEY, name);
+}
+
+function applyBackground(name) {
+  const color = bgColors[name] || bgColors['cherry-blue'];
+  document.body.style.backgroundColor = color;
+  document.documentElement.style.setProperty('--bg', color);
+  document.querySelector('meta[name="theme-color"]').setAttribute('content', color);
+}
+
+function setBackground(name, btn) {
+  document.querySelectorAll('#bgGrid .bg-option').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  saveBg(name);
+  applyBackground(name);
+  showToast('🎨 背景已更换');
+}
+
+function refreshSettingsUI() {
+  const currentBg = loadBg();
+  document.querySelectorAll('#bgGrid .bg-option').forEach(b => {
+    b.classList.toggle('selected', b.dataset.bg === currentBg);
+  });
+}
+
+// ==========================================
+// 初始化
+// ==========================================
+function init() {
+  renderDate();
+  renderAvatar();
+  applyBackground(loadBg());
+  refreshUI();
+  renderKoreanContent();
+  refreshPeriodUI();
+  refreshTreeholeUI();
+  refreshSettingsUI();
+}
+
+document.getElementById('amountInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') addRecord();
+});
+document.getElementById('noteInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') addRecord();
+});
+
+init();
+
+// ==========================================
+// PWA — Service Worker
+// ==========================================
+let deferredPrompt = null;
+let installBannerDismissed = false;
+
+// 监听 beforeinstallprompt
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  deferredPrompt = e;
+  if (!installBannerDismissed) {
+    document.getElementById('installBanner').style.display = 'block';
+  }
+});
+
+// 检测是否已在 standalone 模式
+if (window.matchMedia('(display-mode: standalone)').matches) {
+  installBannerDismissed = true;
+}
+
+function installPWA() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(function(result) {
+      if (result.outcome === 'accepted') {
+        document.getElementById('installBanner').style.display = 'none';
+        installBannerDismissed = true;
+      }
+      deferredPrompt = null;
+    });
+  }
+}
+
+// 注册 Service Worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js', { scope: './' })
+    .then(function(reg) {
+      console.log('SW registered:', reg.scope);
+    })
+    .catch(function(err) {
+      console.log('SW failed:', err);
+    });
+}
+</script>
+</body>
+</html>
