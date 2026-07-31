@@ -1,5 +1,4 @@
-const CACHE_NAME = 'workbuddy-v7';
-
+// Service Worker 已禁用 - 不拦截任何请求
 self.addEventListener('install', function(event) {
   self.skipWaiting();
 });
@@ -11,13 +10,4 @@ self.addEventListener('activate', function(event) {
     })
   );
   self.clients.claim();
-});
-
-self.addEventListener('fetch', function(event) {
-  if (event.request.method !== 'GET') return;
-  event.respondWith(
-    fetch(event.request).catch(function() {
-      return new Response('Offline', { status: 503, statusText: 'Service Unavailable' });
-    })
-  );
 });

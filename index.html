@@ -2366,17 +2366,12 @@ function installPWA() {
   }
 }
 
-// 注册 Service Worker
+// 注册 Service Worker（完全禁用，只为清理旧缓存）
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js', { scope: './' })
-    .then(function(reg) {
-      console.log('SW registered:', reg.scope);
-      // 强制更新 SW，确保最新版本
-      reg.update();
-    })
-    .catch(function(err) {
-      console.log('SW failed:', err);
-    });
+  // 先尝试注销旧的 SW
+  navigator.serviceWorker.getRegistrations().then(function(regs) {
+    regs.forEach(function(reg) { reg.unregister(); });
+  });
 }
 </script>
 </body>
