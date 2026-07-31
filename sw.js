@@ -1,4 +1,4 @@
-const CACHE_NAME = 'workbuddy-v6';
+const CACHE_NAME = 'workbuddy-v7';
 
 self.addEventListener('install', function(event) {
   self.skipWaiting();
@@ -14,6 +14,10 @@ self.addEventListener('activate', function(event) {
 });
 
 self.addEventListener('fetch', function(event) {
-  // 不缓存，直接走网络
-  event.respondWith(fetch(event.request));
+  if (event.request.method !== 'GET') return;
+  event.respondWith(
+    fetch(event.request).catch(function() {
+      return new Response('Offline', { status: 503, statusText: 'Service Unavailable' });
+    })
+  );
 });
